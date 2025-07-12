@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>TV_All_Inter_Series 1</title>
+  <title>tv_all_inter_series1-group</title>
   <style>
     body {
       margin: 0;
@@ -11,7 +11,6 @@
       font-family: sans-serif;
       background-color: #000;
     }
-
     #menu {
       width: 25%;
       background: #6a1b9a;
@@ -20,39 +19,47 @@
       padding: 10px;
       transition: transform 0.3s ease;
     }
-
     #menu.hidden {
       transform: translateX(-100%);
     }
-
     #menu h3 {
       text-align: center;
       margin-top: 0;
     }
-
+    .group {
+      margin-bottom: 10px;
+    }
+    .group h4 {
+      margin: 5px 0;
+      padding: 8px;
+      background: #7e57c2;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .channel-list {
+      display: none;
+      padding-left: 10px;
+    }
     .channel {
       cursor: pointer;
-      margin: 8px 0;
-      padding: 10px;
+      margin: 6px 0;
+      padding: 8px;
       background: #ce93d8;
       border-radius: 5px;
       display: flex;
       align-items: center;
       transition: 0.2s;
     }
-
     .channel:hover, .channel.active {
       background: #f06292;
       color: white;
     }
-
     .channel img {
       width: 50px;
       height: 50px;
       object-fit: contain;
       margin-right: 10px;
     }
-
     #player-container {
       flex: 1;
       background: black;
@@ -61,7 +68,6 @@
       justify-content: center;
       position: relative;
     }
-
     #video {
       width: 100%;
       height: 100%;
@@ -103,7 +109,7 @@
           current = {
             title: nameMatch ? nameMatch[1] : "ไม่ทราบชื่อ",
             logo: logoMatch ? logoMatch[1] : "",
-            group: groupMatch ? groupMatch[1] : ""
+            group: groupMatch ? groupMatch[1] : "ไม่มีหมวดหมู่"
           };
         } else if (line && !line.startsWith("#")) {
           current.url = line;
@@ -118,24 +124,45 @@
       const container = document.getElementById("channel-list");
       container.innerHTML = "";
 
-      channels.forEach((ch, index) => {
-        const div = document.createElement("div");
-        div.className = "channel";
-        div.innerHTML = `
-          ${ch.logo ? `<img src="${ch.logo}" alt="${ch.title}">` : ""}
-          <span>${ch.title}</span>
-        `;
-        div.onclick = () => playChannel(index);
-        container.appendChild(div);
+      const groups = [...new Set(channels.map(c => c.group))];
+
+      groups.forEach(group => {
+        const groupDiv = document.createElement("div");
+        groupDiv.className = "group";
+
+        const header = document.createElement("h4");
+        header.textContent = group;
+        header.onclick = () => {
+          listDiv.style.display = listDiv.style.display === "block" ? "none" : "block";
+        };
+
+        const listDiv = document.createElement("div");
+        listDiv.className = "channel-list";
+
+        channels
+          .filter(c => c.group === group)
+          .forEach((ch, index) => {
+            const div = document.createElement("div");
+            div.className = "channel";
+            div.innerHTML = `${ch.logo ? `<img src="${ch.logo}" alt="${ch.title}">` : ""}<span>${ch.title}</span>`;
+            div.onclick = () => playChannel(ch);
+            listDiv.appendChild(div);
+          });
+
+        groupDiv.appendChild(header);
+        groupDiv.appendChild(listDiv);
+        container.appendChild(groupDiv);
       });
     }
 
-    function playChannel(index) {
+    function playChannel(channel) {
       document.querySelectorAll(".channel").forEach(el => el.classList.remove("active"));
-      document.querySelectorAll(".channel")[index].classList.add("active");
+      const all = [...document.querySelectorAll(".channel")];
+      const found = all.find(el => el.textContent.trim() === channel.title.trim());
+      if (found) found.classList.add("active");
 
       const video = document.getElementById("video");
-      video.src = channels[index].url;
+      video.src = channel.url;
       video.play();
       requestFullscreen(video);
     }
@@ -143,22 +170,16 @@
     async function init() {
       channels = await loadM3U(playlistURL);
       renderChannels();
-      if (channels.length > 0) playChannel(0);
+      if (channels.length > 0) playChannel(channels[0]);
     }
 
     function requestFullscreen(element) {
-      if (element.requestFullscreen) {
-        element.requestFullscreen();
-      } else if (element.webkitRequestFullscreen) {
-        element.webkitRequestFullscreen();
-      } else if (element.mozRequestFullScreen) {
-        element.mozRequestFullScreen();
-      } else if (element.msRequestFullscreen) {
-        element.msRequestFullscreen();
-      }
+      if (element.requestFullscreen) element.requestFullscreen();
+      else if (element.webkitRequestFullscreen) element.webkitRequestFullscreen();
+      else if (element.mozRequestFullScreen) element.mozRequestFullScreen();
+      else if (element.msRequestFullscreen) element.msRequestFullscreen();
     }
 
-    // แสดง/ซ่อนเมนูเมื่อแตะ/คลิกที่ video
     document.addEventListener("DOMContentLoaded", () => {
       const video = document.getElementById("video");
       const menu = document.getElementById("menu");
@@ -170,9 +191,9 @@
       video.addEventListener("touchstart", () => {
         menu.classList.toggle("hidden");
       });
-    });
 
-    window.onload = init;
+      init();
+    });
   </script>
 </body>
 </html>
